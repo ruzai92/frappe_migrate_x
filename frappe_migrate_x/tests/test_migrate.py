@@ -26,7 +26,7 @@ class TestMigrateX(FrappeTestCase):
                             continue
 
                         importlib.import_module(f"{app}.monkey_patches.{module_name[:-3]}")
-            output = "does not exist"
+            output = "does not exist."
 
         patches_loaded = True
                     
