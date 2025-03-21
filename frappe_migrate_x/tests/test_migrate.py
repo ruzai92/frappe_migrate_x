@@ -34,27 +34,15 @@ class TestMigrateX(FrappeTestCase):
 
 
 
-    def test_load_monkey_patches(self):
+    def test_is_app_exist_in_installed_apps(self):
 
-        global patches_loaded
+        installed_apps = frappe.get_installed_apps()
+        print(installed_apps)
 
-        # print(patches_loaded)
-       
-
+        my_app = "frappe_migrate_x"
         for app in frappe.get_installed_apps():
-            print(app)
-            if app in ["frappe", "erpnext"]:
-                continue
-
-            folder = frappe.get_app_path(app, "monkey_patches")
-            if not os.path.exists(folder):
-                print(app+"skipping monkey patches")
-                continue
-
-        #     for module_name in os.listdir(folder):
-        #         if not module_name.endswith(".py") or module_name == "__init__.py":
-        #             continue
-
-        #         importlib.import_module(f"{app}.monkey_patches.{module_name[:-3]}")
-
-        # patches_loaded = True
+            if app == my_app:
+                print(app+"app exists")
+                
+        
+        # print("app doesnt exists")
