@@ -17,6 +17,7 @@ from frappe.exceptions import SiteNotSpecifiedError
 @pass_context
 def migrate(context, skip_failing=False, skip_search_index=False, specific_app=None):
 	"Run patches, sync schema and rebuild files/translations"
+	print("Migrating start with custom site...")
 	from traceback_with_variables import activate_by_import
 
 	from frappe_migrate_x.overrides.customization.custom_migrate import SiteMigration

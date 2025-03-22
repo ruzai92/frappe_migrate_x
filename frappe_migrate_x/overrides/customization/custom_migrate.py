@@ -9,7 +9,8 @@ from textwrap import dedent
 
 import frappe
 import frappe.model.sync
-import frappe.modules.patch_handler
+# import frappe.modules.patch_handler
+import frappe_migrate_x.overrides.customization.custom_patch_handler
 import frappe.translate
 from frappe.cache_manager import clear_global_cache
 from frappe.core.doctype.language.language import sync_languages
@@ -17,13 +18,17 @@ from frappe.core.doctype.scheduled_job_type.scheduled_job_type import sync_jobs
 from frappe.database.schema import add_column
 from frappe.deferred_insert import save_to_db as flush_deferred_inserts
 from frappe.desk.notifications import clear_notifications
-from frappe.modules.patch_handler import PatchType
+# from frappe.modules.patch_handler import PatchType
+from  frappe_migrate_x.overrides.customization.custom_patch_handler import PatchType
 from frappe.modules.utils import sync_customizations
 from frappe.search.website_search import build_index_for_all_routes
 from frappe.utils.connections import check_connection
 from frappe.utils.dashboard import sync_dashboards
-from frappe.utils.fixtures import sync_fixtures
+# from frappe.utils.fixtures import sync_fixtures
+from frappe_migrate_x.overrides.customization.custom_fixtures import sync_fixtures
 from frappe.website.utils import clear_website_cache
+import frappe_migrate_x.overrides.customization.custom_sync
+import click
 
 BENCH_START_MESSAGE = dedent(
 	"""
@@ -120,13 +125,21 @@ class SiteMigration:
 	@atomic
 	def run_schema_updates(self):
 		"""Run patches as defined in patches.txt, sync schema changes as defined in the {doctype}.json files"""
-		frappe.modules.patch_handler.run_all(
-			skip_failing=self.skip_failing, patch_type=PatchType.pre_model_sync
+		frappe_migrate_x.overrides.customization.custom_patch_handler.run_all(
+			skip_failing=self.skip_failing, patch_type=PatchType.pre_model_sync,specific_app=self.specific_app
 		)
-		frappe.model.sync.sync_all()
-		frappe.modules.patch_handler.run_all(
-			skip_failing=self.skip_failing, patch_type=PatchType.post_model_sync
+		frappe_migrate_x.overrides.customization.custom_sync.sync_all(specific_app=self.specific_app)
+		frappe_migrate_x.overrides.customization.custom_patch_handler.run_all(
+			skip_failing=self.skip_failing, patch_type=PatchType.post_model_sync,specific_app=self.specific_app
 		)
+		click.secho(f"finish run_schema_updates", fg="yellow")
+		# frappe.modules.patch_handler.run_all(
+		# 	skip_failing=self.skip_failing, patch_type=PatchType.pre_model_sync,specific_app=self.specific_app
+		# )
+		# frappe.model.sync.sync_all()
+		# frappe.modules.patch_handler.run_all(
+		# 	skip_failing=self.skip_failing, patch_type=PatchType.post_model_sync,specific_app=self.specific_app
+		# )
 
 	@atomic
 	def post_schema_updates(self):
@@ -142,20 +155,39 @@ class SiteMigration:
 		* Sync Installed Applications Version History
 		* Execute `after_migrate` hooks
 		"""
+		click.secho(f"sync_jobs", fg="blue")
 		sync_jobs()
-		sync_fixtures()
-		sync_dashboards()
-		sync_customizations()
+
+		if self.specific_app:
+			click.secho(f"sync_fixtures with app", fg="blue")
+			sync_fixtures(self.specific_app)
+			click.secho(f"sync_dashboards with app", fg="blue")
+			sync_dashboards(self.specific_app)
+			click.secho(f"sync_customizations with app", fg="blue")
+			sync_customizations(self.specific_app)
+		else:
+			click.secho(f"sync_fixtures no app", fg="blue")
+			sync_fixtures()
+			click.secho(f"sync_dashboards no app", fg="blue")
+			sync_dashboards()
+			click.secho(f"sync_customizations no app", fg="blue")
+			sync_customizations()
+
+		click.secho(f"sync_languages", fg="blue")
 		sync_languages()
+		click.secho(f"flush_deferred_inserts", fg="blue")
 		flush_deferred_inserts()
 
+		click.secho(f"sync_menu", fg="blue")
 		frappe.get_single("Portal Settings").sync_menu()
+		click.secho(f"update_versions", fg="blue")
 		frappe.get_single("Installed Applications").update_versions()
 
 		if self.specific_app:
 			for app in frappe.get_installed_apps():
 				if app == self.specific_app:
 					for fn in frappe.get_hooks("after_migrate", app_name=app):
+						click.secho(f"{fn}", fg="red")
 						frappe.get_attr(fn)()
 		else:
 			for app in frappe.get_installed_apps():
@@ -182,6 +214,7 @@ class SiteMigration:
 		"""Run Migrate operation on site specified. This method initializes
 		and destroys connections to the site database.
 		"""
+		
 		if site:
 			frappe.init(site=site)
 			frappe.connect()
