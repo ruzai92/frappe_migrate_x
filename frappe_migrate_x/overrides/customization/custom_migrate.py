@@ -73,10 +73,12 @@ class SiteMigration:
 	- run after migrate hooks
 	"""
 
-	def __init__(self, skip_failing: bool = False, skip_search_index: bool = False, specific_app:str = None) -> None:
+	def __init__(self, skip_failing: bool = False, skip_search_index: bool = False, 
+			  specific_app:str = None, skip_fixtures: bool = False) -> None:
 		self.skip_failing = skip_failing
 		self.skip_search_index = skip_search_index
 		self.specific_app = specific_app
+		self.skip_fixtures = skip_fixtures
 
 	def setUp(self):
 		"""Complete setup required for site migration"""
@@ -159,15 +161,17 @@ class SiteMigration:
 		sync_jobs()
 
 		if self.specific_app:
-			click.secho(f"sync_fixtures with app", fg="blue")
-			sync_fixtures(self.specific_app)
+			if not self.skip_fixtures:
+				click.secho(f"sync_fixtures with app", fg="blue")
+				sync_fixtures(self.specific_app)
 			click.secho(f"sync_dashboards with app", fg="blue")
 			sync_dashboards(self.specific_app)
 			click.secho(f"sync_customizations with app", fg="blue")
 			sync_customizations(self.specific_app)
 		else:
-			click.secho(f"sync_fixtures no app", fg="blue")
-			sync_fixtures()
+			if not self.skip_fixtures:
+				click.secho(f"sync_fixtures with app", fg="blue")
+				sync_fixtures(self.specific_app)
 			click.secho(f"sync_dashboards no app", fg="blue")
 			sync_dashboards()
 			click.secho(f"sync_customizations no app", fg="blue")

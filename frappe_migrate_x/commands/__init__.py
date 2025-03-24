@@ -9,31 +9,33 @@ from frappe import get_installed_apps
 @click.command('migrate-x')
 @click.option("--skip-failing", is_flag=True, help="Skip patches that fail to run")
 @click.option("--skip-search-index", is_flag=True, help="Skip search indexing for web documents")
-@click.option("--specific-app", help="Migrate for specific application")
+@click.option("--app", help="Migrate for specific application")
+@click.option("--skip-fixtures", is_flag=True, help="Skip sync fixtures")
 @pass_context
-def migrate_x(context, skip_failing=False, skip_search_index=False, specific_app=None):
-    "Migrate specific app only"
+def migrate_x(context, skip_failing=False, skip_search_index=False, app=None, skip_fixtures=False):
+    "Migrate specific app only, enable to skip sync fixtures"
     from traceback_with_variables import activate_by_import
 
     confirm = click.confirm("Are you sure you want to continue?")
     if not confirm:
         return
     
-    if specific_app:
+    if app:
         click.secho(f"Initializing.....", fg="yellow")
         for site in context.sites:
             click.secho(f"Current site:{site}", fg="yellow")
             frappe.init(site=site)
 
-            if specific_app not in frappe.get_installed_apps():
-                click.secho(f"{specific_app} is not installed....", fg="red")
+            if app not in frappe.get_installed_apps():
+                click.secho(f"{app} is not installed....", fg="red")
                 return
             
             try:
                 SiteMigration(
                     skip_failing=skip_failing,
                     skip_search_index=skip_search_index,
-                    specific_app=specific_app
+                    specific_app=app,
+                    skip_fixtures=skip_fixtures
                 ).run(site=site)
             finally:
                 print()
