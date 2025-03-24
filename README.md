@@ -3,7 +3,13 @@
 Frappe custom bench migrate for specfic app.
 
 ```
-bench migrate-x --specific-app my_app
+bench migrate-x --app my_app
+```
+
+Option: to disabled sync fixture
+
+```
+bench migrate-x --app my_app --skip-fixtures
 ```
 
 #### License
