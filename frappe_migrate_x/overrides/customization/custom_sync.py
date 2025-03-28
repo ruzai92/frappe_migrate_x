@@ -35,20 +35,14 @@ IMPORTABLE_DOCTYPES = [
 
 
 def sync_all(force=0, reset_permissions=False, specific_app=None):
-    _patch_mode(True)
-	
-    default_apps = ["frappe", "erpnext"]
-	
-    for app in default_apps:
-        if app in frappe.get_installed_apps():
-            sync_for(app, force, reset_permissions=reset_permissions)
+	_patch_mode(True)
 
-    if specific_app in frappe.get_installed_apps():
-        sync_for(specific_app, force, reset_permissions=reset_permissions)
-        
-    _patch_mode(False)
+	if specific_app:
+		sync_for(specific_app, force, reset_permissions=reset_permissions)
+		
+	_patch_mode(False)
 
-    frappe.clear_cache()
+	frappe.clear_cache()
 
 
 def sync_for(app_name, force=0, reset_permissions=False):

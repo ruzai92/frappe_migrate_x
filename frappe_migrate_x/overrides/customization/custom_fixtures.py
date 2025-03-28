@@ -11,16 +11,12 @@ import click
 def sync_fixtures(app=None):
 	"""Import, overwrite fixtures from `[app]/fixtures`"""
 	if app:
-		apps = [app]
-	else:
-		apps = frappe.get_installed_apps()
-	click.secho(f"sync fixtures for {apps}", fg="blue")
-	frappe.flags.in_fixtures = True
+		click.secho(f"sync fixtures for {app}", fg="blue")
+		frappe.flags.in_fixtures = True
 
-	for app in apps:
-		click.secho(f"import_fixtures {apps}", fg="blue")
+		click.secho(f"import fixtures {app}", fg="blue")
 		import_fixtures(app)
-		click.secho(f"import_custom_scripts {apps}", fg="blue")
+		click.secho(f"import custom scripts {app}", fg="blue")
 		import_custom_scripts(app)
 
 	frappe.flags.in_fixtures = False

@@ -76,10 +76,16 @@ class TestMigrateX(FrappeTestCase):
         default_apps = ["frappe", "erpnext"]
         specific_app = "umserp_purchasing"
 
-        for default in default_apps:
-            if default in frappe.get_installed_apps():
-                print(default+" is exist")
+        # for default in default_apps:
+        #     if default in frappe.get_installed_apps():
+        #         print(default+" is exist")
 
-        if specific_app in frappe.get_installed_apps():
-            print(f"{specific_app} do exist")
+        # if specific_app in frappe.get_installed_apps():
+        #     print(f"{specific_app} do exist")
+
+        default_apps.append(specific_app)
+        print(default_apps)
+        print(len(default_apps))
+
+
             

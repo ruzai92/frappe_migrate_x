@@ -79,6 +79,8 @@ class SiteMigration:
 		self.skip_search_index = skip_search_index
 		self.specific_app = specific_app
 		self.skip_fixtures = skip_fixtures
+		self.default_apps = ["frappe", "erpnext"]
+		self.default_apps.append(self.specific_app)
 
 	def setUp(self):
 		"""Complete setup required for site migration"""
@@ -113,35 +115,30 @@ class SiteMigration:
 
 	@atomic
 	def pre_schema_updates(self):
+		
 		"""Executes `before_migrate` hooks"""
-		if self.specific_app:
+		if len(self.default_apps) > 0:
 			for app in frappe.get_installed_apps():
-				if app == self.specific_app:
+				if app in self.default_apps:
 					for fn in frappe.get_hooks("before_migrate", app_name=app):
 						frappe.get_attr(fn)()
-		else:
-			for app in frappe.get_installed_apps():
-				for fn in frappe.get_hooks("before_migrate", app_name=app):
-					frappe.get_attr(fn)()
+
 
 	@atomic
 	def run_schema_updates(self):
 		"""Run patches as defined in patches.txt, sync schema changes as defined in the {doctype}.json files"""
-		frappe_migrate_x.overrides.customization.custom_patch_handler.run_all(
-			skip_failing=self.skip_failing, patch_type=PatchType.pre_model_sync,specific_app=self.specific_app
-		)
-		frappe_migrate_x.overrides.customization.custom_sync.sync_all(specific_app=self.specific_app)
-		frappe_migrate_x.overrides.customization.custom_patch_handler.run_all(
-			skip_failing=self.skip_failing, patch_type=PatchType.post_model_sync,specific_app=self.specific_app
-		)
-		click.secho(f"finish run_schema_updates", fg="yellow")
-		# frappe.modules.patch_handler.run_all(
-		# 	skip_failing=self.skip_failing, patch_type=PatchType.pre_model_sync,specific_app=self.specific_app
-		# )
-		# frappe.model.sync.sync_all()
-		# frappe.modules.patch_handler.run_all(
-		# 	skip_failing=self.skip_failing, patch_type=PatchType.post_model_sync,specific_app=self.specific_app
-		# )
+		if len(self.default_apps) > 0:
+			for app in frappe.get_installed_apps():
+				if app in self.default_apps:
+					frappe_migrate_x.overrides.customization.custom_patch_handler.run_all(
+						skip_failing=self.skip_failing, patch_type=PatchType.pre_model_sync,specific_app=app
+					)
+					frappe_migrate_x.overrides.customization.custom_sync.sync_all(specific_app=app)
+					frappe_migrate_x.overrides.customization.custom_patch_handler.run_all(
+						skip_failing=self.skip_failing, patch_type=PatchType.post_model_sync,specific_app=app
+					)
+
+			click.secho(f"finish run_schema_updates", fg="yellow")
 
 	@atomic
 	def post_schema_updates(self):
@@ -157,46 +154,36 @@ class SiteMigration:
 		* Sync Installed Applications Version History
 		* Execute `after_migrate` hooks
 		"""
-		click.secho(f"sync_jobs", fg="blue")
+		click.secho(f"sync jobs", fg="blue")
 		sync_jobs()
 
-		if self.specific_app:
-			if not self.skip_fixtures:
-				click.secho(f"sync_fixtures with app", fg="blue")
-				sync_fixtures(self.specific_app)
-			click.secho(f"sync_dashboards with app", fg="blue")
-			sync_dashboards(self.specific_app)
-			click.secho(f"sync_customizations with app", fg="blue")
-			sync_customizations(self.specific_app)
-		else:
-			if not self.skip_fixtures:
-				click.secho(f"sync_fixtures with app", fg="blue")
-				sync_fixtures(self.specific_app)
-			click.secho(f"sync_dashboards no app", fg="blue")
-			sync_dashboards()
-			click.secho(f"sync_customizations no app", fg="blue")
-			sync_customizations()
+		if len(self.default_apps) > 0:
+			for app in frappe.get_installed_apps():
+				if app in self.default_apps:
+					if not self.skip_fixtures:
+						click.secho(f"sync {app} fixtures", fg="blue")
+						sync_fixtures(app)
 
-		click.secho(f"sync_languages", fg="blue")
-		sync_languages()
-		click.secho(f"flush_deferred_inserts", fg="blue")
+					click.secho(f"sync {app} dashboards", fg="blue")
+					sync_dashboards(app)
+					click.secho(f"sync {app} customizations ", fg="blue")
+					sync_customizations(app)
+
+		click.secho(f"sync languages", fg="blue")
+		sync_languages()		
 		flush_deferred_inserts()
 
-		click.secho(f"sync_menu", fg="blue")
 		frappe.get_single("Portal Settings").sync_menu()
-		click.secho(f"update_versions", fg="blue")
 		frappe.get_single("Installed Applications").update_versions()
 
-		if self.specific_app:
+
+		if len(self.default_apps) > 0:
 			for app in frappe.get_installed_apps():
-				if app == self.specific_app:
+				if app in self.default_apps:
 					for fn in frappe.get_hooks("after_migrate", app_name=app):
 						click.secho(f"{fn}", fg="red")
 						frappe.get_attr(fn)()
-		else:
-			for app in frappe.get_installed_apps():
-				for fn in frappe.get_hooks("after_migrate", app_name=app):
-					frappe.get_attr(fn)()
+
 		
 
 	def required_services_running(self) -> bool:
