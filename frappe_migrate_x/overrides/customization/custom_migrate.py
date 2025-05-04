@@ -29,6 +29,7 @@ from frappe_migrate_x.overrides.customization.custom_fixtures import sync_fixtur
 from frappe.website.utils import clear_website_cache
 import frappe_migrate_x.overrides.customization.custom_sync
 import click
+from frappe.migrate import SiteMigration
 
 BENCH_START_MESSAGE = dedent(
 	"""
@@ -59,7 +60,7 @@ def atomic(method):
 	return wrapper
 
 
-class SiteMigration:
+class SiteMigrationX(SiteMigration):
 	"""Migrate all apps to the current version, will:
 	- run before migrate hooks
 	- run patches
@@ -82,40 +83,8 @@ class SiteMigration:
 		self.default_apps = ["frappe", "erpnext"]
 		self.default_apps.append(self.specific_app)
 
-	def setUp(self):
-		"""Complete setup required for site migration"""
-		frappe.flags.touched_tables = set()
-		self.touched_tables_file = frappe.get_site_path("touched_tables.json")
-		add_column(doctype="DocType", column_name="migration_hash", fieldtype="Data")
-		clear_global_cache()
-
-		if os.path.exists(self.touched_tables_file):
-			os.remove(self.touched_tables_file)
-
-		frappe.flags.in_migrate = True
-
-	def tearDown(self):
-		"""Run operations that should be run post schema updation processes
-		This should be executed irrespective of outcome
-		"""
-		frappe.translate.clear_cache()
-		clear_website_cache()
-		clear_notifications()
-
-		with open(self.touched_tables_file, "w") as f:
-			json.dump(list(frappe.flags.touched_tables), f, sort_keys=True, indent=4)
-
-		if not self.skip_search_index:
-			print(f"Queued rebuilding of search index for {frappe.local.site}")
-			frappe.enqueue(build_index_for_all_routes, queue="long")
-
-		frappe.publish_realtime("version-update")
-		frappe.flags.touched_tables.clear()
-		frappe.flags.in_migrate = False
-
 	@atomic
 	def pre_schema_updates(self):
-		
 		"""Executes `before_migrate` hooks"""
 		if len(self.default_apps) > 0:
 			for app in frappe.get_installed_apps():
@@ -183,23 +152,6 @@ class SiteMigration:
 					for fn in frappe.get_hooks("after_migrate", app_name=app):
 						click.secho(f"{fn}", fg="red")
 						frappe.get_attr(fn)()
-
-		
-
-	def required_services_running(self) -> bool:
-		"""Returns True if all required services are running. Returns False and prints
-		instructions to stdout when required services are not available.
-		"""
-		service_status = check_connection(redis_services=["redis_cache"])
-		are_services_running = all(service_status.values())
-
-		if not are_services_running:
-			for service in service_status:
-				if not service_status.get(service, True):
-					print(f"Service {service} is not running.")
-			print(BENCH_START_MESSAGE)
-
-		return are_services_running
 
 	def run(self, site: str):
 		"""Run Migrate operation on site specified. This method initializes

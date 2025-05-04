@@ -10,6 +10,7 @@ import frappe
 from frappe.modules.import_file import import_file_by_path
 from frappe.modules.patch_handler import _patch_mode
 from frappe.utils import update_progress_bar
+from frappe.model.sync import get_doc_files
 
 IMPORTABLE_DOCTYPES = [
 	("core", "doctype"),
@@ -117,21 +118,3 @@ def sync_for(app_name, force=0, reset_permissions=False):
 
 		# print each progress bar on new line
 		print()
-
-
-def get_doc_files(files, start_path):
-	"""walk and sync all doctypes and pages"""
-
-	files = files or []
-
-	for _module, doctype in IMPORTABLE_DOCTYPES:
-		doctype_path = os.path.join(start_path, doctype)
-		if os.path.exists(doctype_path):
-			for docname in os.listdir(doctype_path):
-				if os.path.isdir(os.path.join(doctype_path, docname)):
-					doc_path = os.path.join(doctype_path, docname, docname) + ".json"
-					if os.path.exists(doc_path):
-						if doc_path not in files:
-							files.append(doc_path)
-
-	return files
