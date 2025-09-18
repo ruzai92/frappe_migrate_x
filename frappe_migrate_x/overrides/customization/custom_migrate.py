@@ -75,13 +75,24 @@ class SiteMigrationX(SiteMigration):
 	"""
 
 	def __init__(self, skip_failing: bool = False, skip_search_index: bool = False, 
-			  specific_app:str = None, skip_fixtures: bool = False) -> None:
+			  specific_apps: list = None, specific_app: str = None, skip_fixtures: bool = False) -> None:
 		self.skip_failing = skip_failing
 		self.skip_search_index = skip_search_index
-		self.specific_app = specific_app
 		self.skip_fixtures = skip_fixtures
 		self.default_apps = ["frappe", "erpnext"]
-		self.default_apps.append(self.specific_app)
+		
+		# Handle backward compatibility with specific_app parameter
+		if specific_apps:
+			self.specific_apps = specific_apps
+		elif specific_app:
+			self.specific_apps = [specific_app]
+		else:
+			self.specific_apps = []
+			
+		# Add specific apps to default apps, avoiding duplicates
+		for app in self.specific_apps:
+			if app not in self.default_apps:
+				self.default_apps.append(app)
 
 	@atomic
 	def pre_schema_updates(self):
